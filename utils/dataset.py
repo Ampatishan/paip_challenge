@@ -1,9 +1,15 @@
 import os
 import cv2
+import numpy as np
 from torch.utils.data import Dataset
 
-
 # TODO Incorporate the values from the excel file into the dataset file
+'''
+0 stands for background
+1 stands for tumor 
+2 stands for non tumor
+'''
+
 
 class paip_dataset(Dataset):
     def __init__(self, is_colon, image_path, mask_path=None, transforms=None, \
@@ -57,7 +63,9 @@ class paip_dataset(Dataset):
                 tumor_mask = self.target_transform(tumor_mask)
                 non_tumor_mask = self.target_transform(non_tumor_mask)
 
-            return img, tumor_mask, non_tumor_mask
+            mask = np.stack([tumor_mask * 1, non_tumor_mask * 2])
+
+            return img, mask
         else:
             return img
 
