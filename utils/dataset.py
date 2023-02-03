@@ -40,31 +40,35 @@ class paip_dataset(Dataset):
         return len(self.img_names)
 
     def __getitem__(self, idx):
-        idx = 0
-        img_name = self.img_names[idx]
+        mask = np.zeros(3)
+        while np.sum(mask) == 0:
+            idx+=1
+            idx = idx%len(self)
+            img_name = self.img_names[idx]
 
+            if self.mask_path:
+                tumor_mask_name = self.tumor_masks_names[idx]
+                non_tumor_mask_name = self.non_tumor_masks_names[idx]
+
+                assert img_name[:7] == tumor_mask_name[:7] \
+                       == non_tumor_mask_name[:7], \
+                    "Non-corresponding files selected for masks and images"
+
+            img = cv2.imread(os.path.join(self.img_path, img_name))
+            if self.transform:
+                img = self.transform(img)
+
+            if self.mask_path:
+                tumor_mask = cv2.imread(os.path.join(self.mask_path, 'tumor', tumor_mask_name))
+                non_tumor_mask = cv2.imread(os.path.join(self.mask_path, 'non_tumor', non_tumor_mask_name))
+
+                if self.target_transform:
+                    tumor_mask = np.squeeze(self.target_transform(tumor_mask[:,:,0]))
+                    non_tumor_mask = np.squeeze(self.target_transform(non_tumor_mask[:,:,0]))
+
+                mask = np.stack([tumor_mask * 1, non_tumor_mask * 2])
         if self.mask_path:
-            tumor_mask_name = self.tumor_masks_names[idx]
-            non_tumor_mask_name = self.non_tumor_masks_names[idx]
-
-            assert img_name[:7] == tumor_mask_name[:7] \
-                   == non_tumor_mask_name[:7], \
-                "Non-corresponding files selected for masks and images"
-
-        img = cv2.imread(os.path.join(self.img_path, img_name))
-        if self.transform:
-            img = self.transform(img)
-
-        if self.mask_path:
-            tumor_mask = cv2.imread(os.path.join(self.mask_path, 'tumor', tumor_mask_name))
-            non_tumor_mask = cv2.imread(os.path.join(self.mask_path, 'non_tumor', non_tumor_mask_name))
-
-            if self.target_transform:
-                tumor_mask = self.target_transform(tumor_mask)
-                non_tumor_mask = self.target_transform(non_tumor_mask)
-
-            mask = np.stack([tumor_mask * 1, non_tumor_mask * 2])
-
+            print(np.sum(mask))
             return img, mask
         else:
             return img
